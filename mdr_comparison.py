@@ -3,7 +3,7 @@ import numpy as np
 from datetime import datetime
 import os
 from warnings import filterwarnings
-from nicegui import app, ui, run, html
+from nicegui import app, ui, run, html, native
 
 # Filter out warnings due to weird Workbook naming.
 filterwarnings("ignore", message="Workbook contains no default style", category=UserWarning)
@@ -217,4 +217,4 @@ with ui.row():
     exportBtn = ui.button("Export Table to CSV", on_click = export)
     exportBtn.disable()
 
-ui.run(reload=False,native=True)
+ui.run(reload=False,native=True, port=native.find_open_port())
