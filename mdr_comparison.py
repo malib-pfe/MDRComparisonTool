@@ -116,13 +116,12 @@ async def choose_mdr_file():
     else:
         ui.notify('No file selected.')
 
-# TODO
 def check_file_for_sheet(sheetname, filename):
     xl = pd.ExcelFile(filename)
     return sheetname in xl.sheet_names
 
 async def handle_execute():
-    ui.notify("Executing... Please Wait.")
+    n = ui.notification("Executing... Please Wait.", type='ongoing', timeout=None, spinner=True)
     executeBtn.disable()
     rcc = rcc_filepath.text
     mdr = mdr_filepath.text
@@ -134,6 +133,10 @@ async def handle_execute():
     state['table'].columns[2]['sortable'] = True
     state['table'].columns[3]['sortable'] = True
     state['input'] = ui.input('Search table').bind_value(state["table"], 'filter')
+    n.message = "Complete!"
+    n.type = "positive"
+    n.timeout = 3
+    n.spinner = False
     exportBtn.enable()
     clearBtn.enable()
 
