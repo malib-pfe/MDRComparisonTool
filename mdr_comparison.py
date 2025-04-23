@@ -105,7 +105,7 @@ async def choose_rcc_file():
         if check_file_for_sheet('Item', file[0]):
             rcc_filepath.set_text(file[0])
         else:
-            ui.notify("'Item' sheet not found. Please check file.")
+            ui.notify("'Item' sheet not found. Please check file.")            
     else:
         ui.notify('No file selected.')
 
@@ -113,15 +113,23 @@ async def choose_mdr_file():
     file = await app.native.main_window.create_file_dialog(allow_multiple=False, file_types= ('Excel Files (*.xlsx)',))
     if file is not None:
         if check_file_for_sheet('Data', file[0]):
-            mdr_filepath.set_text(file[0])
+            is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
+            if is_pmdr:
+                mdr_filepath.set_text(file[0])
+            else:
+                ui.notify("'Latest' column not found. Please use RCC MDR.")
         else:
-            ui.notify("'Data' sheet not found. Please check file.")
+            ui.notify("'Item' sheet not found. Please check file.")
     else:
         ui.notify('No file selected.')
 
 def check_file_for_sheet(sheetname, filename):
     xl = pd.ExcelFile(filename)
     return sheetname in xl.sheet_names
+
+def check_file_for_col(colname, filename):
+    df = pd.read_excel(filename, sheet_name="Data",engine="openpyxl")
+    return colname in df.columns
 
 async def handle_execute():
     n = ui.notification("Executing... Please Wait.", type='ongoing', timeout=None, spinner=True)
@@ -198,7 +206,7 @@ ui.add_css(
 state = {}
 with ui.row():
     ui.label("Link to MDR Folder:")
-    ui.link("Link", "https://pfizer.sharepoint.com/:f:/r/sites/TASL/PMO/CDISC/Weekly%20Forum%20Meeting%20Minutes/2.%20MDR%20Library%20(and%20CDISC)%20Content?csf=1&web=1&e=Aav3wV", new_tab= True)
+    ui.link("Link", "https://pfizer.sharepoint.com/:f:/r/sites/TASL/PMO/CDISC/Weekly%20Forum%20Meeting%20Minutes/2.%20MDR%20Library%20(and%20CDISC)%20Content/RCC%20Standard%20Metadata%20Files?csf=1&web=1&e=W9AlxW", new_tab= True)
 with ui.header():
     ui.label('MDR Comparison Tool').style('font-size: 200%; font-weight: bold').classes('absolute-center')
     
