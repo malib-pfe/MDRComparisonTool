@@ -16,6 +16,7 @@ def isolate_mdr(mdr_df, rcc_df):
     mdr_df = mdr_df[mdr_df["latest"] == True] # Only items that are the latest
     mdr_df = mdr_df[mdr_df['f_ver'].str.contains('Volume 3')]
     mdr_df = mdr_df[(mdr_df['library'] == 'Core') | (mdr_df['library'] == 'Efficacy')]
+    mdr_df = mdr_df[mdr_df['mandatory_to_be_collected' == True]]
     mdr_df = mdr_df[["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"]]
 
     # Get the most up to date version of each item. Sort by descending to search longer names first. Removes any duplicates
