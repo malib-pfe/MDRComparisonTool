@@ -16,7 +16,6 @@ def isolate_mdr(mdr_df, rcc_df):
     mdr_df = mdr_df[mdr_df["latest"] == True] # Only items that are the latest
     mdr_df = mdr_df[mdr_df['f_ver'].str.contains('Volume 3')]
     mdr_df = mdr_df[(mdr_df['library'] == 'Core') | (mdr_df['library'] == 'Efficacy')]
-    print(mdr_df)
     mdr_df = mdr_df[mdr_df["mandatory_to_be_collected"] == True]
     mdr_df = mdr_df[["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"]]
 
@@ -69,7 +68,6 @@ def return_missing_fields(rcc_df, mandatory_df):
     final_df = final_df.drop(columns=["Variable Name", 'mdes_form_name', 'mde_is_cond_reqd']) # Drops empty columns.
     final_df = final_df[['Form Name', 'Item', 'Type', 'Description','Context']]
     return final_df
-
 
 def compare_files(rcc:str,mdr:str) -> pd.DataFrame:
     # Full print option used for development.
