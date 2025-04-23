@@ -13,6 +13,8 @@ def isolate_mdr(mdr_df, rcc_df):
     
     # Isolate the items to compare from MDR.
     mdr_df = mdr_df[mdr_df["latest"] == True] # Only items that are the latest
+    mdr_df = mdr_df[mdr_df['f_ver'].str.contains('Volume 3')]
+    mdr_df = mdr_df[(mdr_df['library'] == 'Core') | (mdr_df['library'] == 'Efficacy')]
     mdr_df = mdr_df[["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"]]
 
     # Get the most up to date version of each item. Sort by descending to search longer names first. Removes any duplicates
@@ -104,6 +106,7 @@ async def choose_rcc_file():
     if file is not None:
         if check_file_for_sheet('Item', file[0]):
             rcc_filepath.set_text(file[0])
+            ui.notify('RCC file selected.', type='positive')
         else:
             ui.notify("'Item' sheet not found. Please check file.")            
     else:
@@ -113,11 +116,19 @@ async def choose_mdr_file():
     file = await app.native.main_window.create_file_dialog(allow_multiple=False, file_types= ('Excel Files (*.xlsx)',))
     if file is not None:
         if check_file_for_sheet('Data', file[0]):
+            n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
             is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
             if is_pmdr:
+                n2.message = "MDR file selected."
+                n2.type = "positive"
+                n2.timeout = 3
+                n2.spinner = False
                 mdr_filepath.set_text(file[0])
             else:
-                ui.notify("'Latest' column not found. Please use RCC MDR.")
+                n2.message = "'Latest' column not found. Please use RCC MDR."
+                n2.type = "negative"
+                n2.timeout = 3
+                n2.spinner = False
         else:
             ui.notify("'Item' sheet not found. Please check file.")
     else:
@@ -157,6 +168,7 @@ async def reset_page():
     executeBtn.enable()
     exportBtn.disable()
     clearBtn.disable()
+    ui.notify('Table Cleared.')
 
 async def export():
     folder_path = os.path.dirname(rcc_filepath.text)
@@ -164,6 +176,7 @@ async def export():
     now = datetime.now()
     timestamp_string = folder_path + filename + now.strftime("%Y_%m_%d_%H_%M_%S") + '.csv'
     result.to_csv(timestamp_string, index= False)
+    ui.notify("Table exported to CSV located in " + folder_path)
 
 # Define the UI.
 ui.add_css(
