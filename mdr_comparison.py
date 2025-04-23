@@ -1,5 +1,6 @@
 import pandas as pd
 import numpy as np
+import openpyxl as op
 from datetime import datetime
 import os
 from warnings import filterwarnings
@@ -105,38 +106,64 @@ async def choose_rcc_file():
     file = await app.native.main_window.create_file_dialog(allow_multiple=False, file_types= ('Excel Files (*.xlsx)',))
     if file is not None:
         if check_file_for_sheet('Item', file[0]):
-            rcc_filepath.set_text(file[0])
-            ui.notify('RCC file selected.', type='positive')
+            n3 = ui.notification("Checking RCC Metadata Export...", type='ongoing', timeout=None, spinner=True)
+            is_filtered = await run.cpu_bound(check_file_for_filter, 'Item', file[0])
+            if not is_filtered:
+                n3.message = "MDR file selected."
+                n3.type = "positive"
+                n3.timeout = 3
+                n3.spinner = False
+                rcc_filepath.set_text(file[0])
+            else:
+                n3.message = "Filter exists in Item sheet. Please check RCC Metadata Export."
+                n3.type = "negative"
+                n3.timeout = 3
+                n3.spinner = False
         else:
-            ui.notify("'Item' sheet not found. Please check file.")            
+            ui.notify("'Item' sheet not found. Please check file.", type='negative')            
     else:
         ui.notify('No file selected.')
 
 async def choose_mdr_file():
     file = await app.native.main_window.create_file_dialog(allow_multiple=False, file_types= ('Excel Files (*.xlsx)',))
     if file is not None:
-        if check_file_for_sheet('Data', file[0]):
-            n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
-            is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
-            if is_pmdr:
-                n2.message = "MDR file selected."
-                n2.type = "positive"
-                n2.timeout = 3
-                n2.spinner = False
-                mdr_filepath.set_text(file[0])
+        if datetime.now().strftime("_%b_%d_%Y") in file[0]:
+            if check_file_for_sheet('Data', file[0]):
+                n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
+                is_filtered = await run.cpu_bound(check_file_for_filter, 'Data', file[0])
+                if not is_filtered:
+                    is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
+                    if is_pmdr:
+                        n2.message = "MDR file selected."
+                        n2.type = "positive"
+                        n2.timeout = 3
+                        n2.spinner = False
+                        mdr_filepath.set_text(file[0])
+                    else:
+                        n2.message = "'Latest' column not found in selected file. Please use RCC MDR."
+                        n2.type = "negative"
+                        n2.timeout = 3
+                        n2.spinner = False
+                else:
+                    n2.message = "Filter exists in Data sheet. Please check RCC MDR."
+                    n2.type = "negative"
+                    n2.timeout = 3
+                    n2.spinner = False
             else:
-                n2.message = "'Latest' column not found. Please use RCC MDR."
-                n2.type = "negative"
-                n2.timeout = 3
-                n2.spinner = False
+                ui.notify("'Data' sheet not found. Please check file.", type='negative')
         else:
-            ui.notify("'Item' sheet not found. Please check file.")
+            ui.notify("Today's date not found in MDR filename.", type = 'negative')
     else:
         ui.notify('No file selected.')
 
 def check_file_for_sheet(sheetname, filename):
     xl = pd.ExcelFile(filename)
     return sheetname in xl.sheet_names
+
+def check_file_for_filter(sheetname, filename):
+    workbook = op.load_workbook(filename)
+    sheet = workbook[sheetname]
+    return sheet.auto_filter
 
 def check_file_for_col(colname, filename):
     df = pd.read_excel(filename, sheet_name="Data",engine="openpyxl")
