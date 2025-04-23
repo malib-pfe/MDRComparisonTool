@@ -192,12 +192,14 @@ async def handle_execute():
 async def reset_page():
     state["table"].delete()
     state['input'].delete()
+    exportBtn.enable()
     executeBtn.enable()
     exportBtn.disable()
     clearBtn.disable()
     ui.notify('Table Cleared.')
 
 async def export():
+    exportBtn.disable()
     folder_path = os.path.dirname(rcc_filepath.text)
     filename = '/MDRComparisonOutput_'
     now = datetime.now()
@@ -271,4 +273,4 @@ with ui.row():
     exportBtn = ui.button("Export Table to CSV", on_click = export)
     exportBtn.disable()
 
-ui.run(reload=False,native=True, port=native.find_open_port())
+ui.run(reload=False,native=True, port=native.find_open_port(), title="MDR Comparison Tool")
