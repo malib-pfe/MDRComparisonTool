@@ -16,7 +16,8 @@ def isolate_mdr(mdr_df, rcc_df):
     mdr_df = mdr_df[mdr_df["latest"] == True] # Only items that are the latest
     mdr_df = mdr_df[mdr_df['f_ver'].str.contains('Volume 3')]
     mdr_df = mdr_df[(mdr_df['library'] == 'Core') | (mdr_df['library'] == 'Efficacy')]
-    mdr_df = mdr_df[mdr_df['mandatory_to_be_collected' == True]]
+    print(mdr_df)
+    mdr_df = mdr_df[mdr_df["mandatory_to_be_collected"] == True]
     mdr_df = mdr_df[["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"]]
 
     # Get the most up to date version of each item. Sort by descending to search longer names first. Removes any duplicates
@@ -110,7 +111,7 @@ async def choose_rcc_file():
             n3 = ui.notification("Checking RCC Metadata Export...", type='ongoing', timeout=None, spinner=True)
             is_filtered = await run.cpu_bound(check_file_for_filter, 'Item', file[0])
             if not is_filtered:
-                n3.message = "MDR file selected."
+                n3.message = "Metadata export selected."
                 n3.type = "positive"
                 n3.timeout = 3
                 n3.spinner = False
@@ -201,11 +202,17 @@ async def reset_page():
 
 async def export():
     exportBtn.disable()
+    
+    # Create file path for output file.
     folder_path = os.path.dirname(rcc_filepath.text)
     filename = '/MDRComparisonOutput_'
     now = datetime.now()
     timestamp_string = folder_path + filename + now.strftime("%Y_%m_%d_%H_%M_%S") + '.csv'
-    result.to_csv(timestamp_string, index= False)
+    
+    # Added builder comment column.
+    df = result
+    df["Builder Comments"] = ""
+    df.to_csv(timestamp_string, index= False)
     ui.notify("Table exported to CSV located in " + folder_path)
 
 # Define the UI.
