@@ -12,11 +12,11 @@ def isolate_mdr(mdr_df, rcc_df):
     # Function to only get relevant forms for specific RCC study from MDR since MDR has ALL forms.
     
     # Isolate the items to compare from MDR.
-    mdr_df = mdr_df[mdr_df["folder"] == "Volume 3"] # Only items from Volume 3
-    mdr_df = mdr_df[["folder","f_ver","s_ver","mdes_form_name", "mde_name", "item_refname", "mde_design_instruction", "mandatory_to_be_collected"]]
+    mdr_df = mdr_df[mdr_df["latest"] == True] # Only items that are the latest
+    mdr_df = mdr_df[["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"]]
 
     # Get the most up to date version of each item. Sort by descending to search longer names first. Removes any duplicates
-    mdr_df = mdr_df.sort_values('s_ver', ascending=False).drop_duplicates(["mdes_form_name","item_refname"])
+    #mdr_df = mdr_df.sort_values('s_ver', ascending=False).drop_duplicates(["mdes_form_name","item_refname"])
     mdr_df = mdr_df.sort_values("mdes_form_name", ascending = False)
 
     # Get only the relevant forms and items.
@@ -47,19 +47,22 @@ def create_fake_study(rcc_df, mdr_df):
     mandatory_df = mandatory_df.drop_duplicates(["RefName Path","mdes_form_name"]) # Gives a list that maps RCC Forms to MDR Form Names
     mandatory_df = mandatory_df.merge(mdr_df,how = 'left', on=['mdes_form_name']) # Merge MDR onto the mandatory df where the MDR names match
     mandatory_df = mandatory_df[mandatory_df["mandatory_to_be_collected"] == True] # Keep only mandatory fields for this fake study
-    mandatory_df = mandatory_df[['RefName Path', 'item_refname',"mde_design_instruction"]] # Keep only relevant columns.
-    # 'RefName Path', 'item_refname',"mde_design_instruction"
+    mandatory_df = mandatory_df[['RefName Path', 'item_refname',"crf_collection_guidance", "mde_is_cond_reqd"]] # Keep only relevant columns.
+    # 'RefName Path', 'item_refname',"crf_collection_guidance"
+    # AE001            AESCAT            instruction
     # AE001_1          AESCAT            instruction 
-
+    # Example row where first column is the RCC create event, the second column is the mandatory fields associated, and the last column is any context.
     return mandatory_df
 
 def return_missing_fields(rcc_df, mandatory_df):
     final_df = mandatory_df.merge(rcc_df,how = 'left', on=["RefName Path", "item_refname"]) # Merge export where RCC Form names and MDR item names match.
     final_df = final_df[final_df['Variable Name'].isnull()] # Variable name is RCC item name, if it's null, then a mandatory field is missing.
-    final_df.insert(loc=2, column='Description', value=[f"{item} is marked as 'Mandatory' in the MDR Repository; however, it is not being collected in {form}." for form, item in zip(final_df['RefName Path'], final_df['item_refname'])]) # Inserts description of error.
+    final_df['Type'] = final_df.mde_is_cond_reqd.apply(lambda x: "Optionally Required" if x == True else "Mandatory")
+    final_df.insert(loc=3, column='Description', value=[f"{item} is marked as {mand_string} in the MDR Repository; however, it is not being collected in {form}." for form, item, mand_string in zip(final_df['RefName Path'], final_df['item_refname'], final_df['Type'])]) # Inserts description of error.
     #final_df['Description'] = [f"{item} is marked as 'Mandatory' in the MDR Repository; however, it is not being collected in {form}." for form, item in zip(final_df['RefName Path'], final_df['item_refname'])] 
-    final_df = final_df.rename(columns={'RefName Path': 'Form Name', 'item_refname': 'Item', "mde_design_instruction":'Context'})
-    final_df = final_df.drop(columns=["Variable Name", 'mdes_form_name']) # Drops empty columns.
+    final_df = final_df.rename(columns={'RefName Path': 'Form Name', 'item_refname': 'Item', "crf_collection_guidance":'Context'})
+    final_df = final_df.drop(columns=["Variable Name", 'mdes_form_name', 'mde_is_cond_reqd']) # Drops empty columns.
+    final_df = final_df[['Form Name', 'Item', 'Type', 'Description','Context']]
     return final_df
 
 
