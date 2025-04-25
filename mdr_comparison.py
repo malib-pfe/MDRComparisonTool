@@ -253,19 +253,19 @@ ui.add_css(
 
 state = {}
 with ui.row():
-    ui.label("Link to MDR Folder:")
+    ui.label("Link to MDR Folder:").style('font-weight:bold')
     ui.link("Link", "https://pfizer.sharepoint.com/:f:/r/sites/TASL/PMO/CDISC/Weekly%20Forum%20Meeting%20Minutes/2.%20MDR%20Library%20(and%20CDISC)%20Content/RCC%20Standard%20Metadata%20Files?csf=1&web=1&e=W9AlxW", new_tab= True)
 with ui.header():
     ui.label('MDR Comparison Tool').style('font-size: 200%; font-weight: bold').classes('absolute-center')
     
 with ui.row():
-    ui.label('RCC Study Metadata Export File Path:')
+    ui.label('RCC Study Metadata Export File Path:').style('font-weight:bold')
     rcc_filepath = ui.label()
 
 ui.button('Select RCC Metadata Export',on_click=choose_rcc_file)
 
 with ui.row():
-    ui.label('MDR File Path:')
+    ui.label('MDR File Path:').style('font-weight:bold')
     mdr_filepath = ui.label()
 
 ui.button("Select Today's MDR",on_click=choose_mdr_file)
