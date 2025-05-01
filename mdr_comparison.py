@@ -132,7 +132,7 @@ async def choose_mdr_file():
                 n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
                 is_filtered = await run.cpu_bound(check_file_for_filter, 'Data', file[0])
                 if not is_filtered:
-                    is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
+                    is_pmdr = await run.cpu_bound(check_file_for_col, 'mde_is_visible', file[0])
                     if is_pmdr:
                         n2.message = "MDR file selected."
                         n2.type = "positive"
@@ -140,7 +140,7 @@ async def choose_mdr_file():
                         n2.spinner = False
                         mdr_filepath.set_text(file[0])
                     else:
-                        n2.message = "'Latest' column not found in selected file. Please use RCC MDR."
+                        n2.message = "Please check that you are using the RCC MDR."
                         n2.type = "negative"
                         n2.timeout = 3
                         n2.spinner = False
