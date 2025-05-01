@@ -19,7 +19,7 @@ def isolate_mdr(mdr_df, rcc_df):
     mdr_df = mdr_df[mdr_df["mandatory_to_be_collected"] == True]
     mdr_df = mdr_df[["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"]]
 
-    # Get the most up to date version of each item. Sort by descending to search longer names first. Removes any duplicates
+    # Get the most up to date version of each item. Sort by descending to search longer names first.
     #mdr_df = mdr_df.sort_values('s_ver', ascending=False).drop_duplicates(["mdes_form_name","item_refname"])
     mdr_df = mdr_df.sort_values("mdes_form_name", ascending = False)
 
@@ -91,10 +91,10 @@ def compare_files(rcc:str,mdr:str) -> pd.DataFrame:
     mapped_rcc_formnames = map_rcc_formnames(relevant_forms, rcc_df)
     rcc_df = rcc_df.merge(mapped_rcc_formnames['mdes_form_name'], how='outer', left_index=True, right_index=True) # Merge MDR Form names onto RCC metadata export
 
-    # Create a df that maps RCC export Item Names to their MDR item Names
+    # Create a df that maps RCC export Item Names to their MDR item Names   
     mapped_rcc_itemnames = map_rcc_itemnames(relevant_vars, rcc_df)
     rcc_df = rcc_df.merge(mapped_rcc_itemnames['item_refname'], how='outer', left_index=True, right_index=True).dropna(axis=0) # Merge MDR item names onto RCC metadata export. Drop any forms that don't exist in MDR.
-
+    
     # Create a fake study of mandatory items using a list of RCC forms from the export. This captures all duplicates of the same forms (DM001 and DM001_1: means two sets of DM001 forms, not just presence of DM001 forms)
     mandatory_df = create_fake_study(rcc_df, mdr_df)
     
@@ -255,6 +255,7 @@ state = {}
 with ui.row():
     ui.label("Link to MDR Folder:").style('font-weight:bold')
     ui.link("Link", "https://pfizer.sharepoint.com/:f:/r/sites/TASL/PMO/CDISC/Weekly%20Forum%20Meeting%20Minutes/2.%20MDR%20Library%20(and%20CDISC)%20Content/RCC%20Standard%20Metadata%20Files?csf=1&web=1&e=W9AlxW", new_tab= True)
+
 with ui.header():
     ui.label('MDR Comparison Tool').style('font-size: 200%; font-weight: bold').classes('absolute-center')
     
