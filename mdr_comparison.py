@@ -5,9 +5,31 @@ from datetime import datetime
 import os
 from warnings import filterwarnings
 from nicegui import app, ui, run, html, native
+import requests
+
+version_num = "1.0"
+file_url = "https://raw.githubusercontent.com/malib-pfe/MDRComparisonTool/refs/heads/main/version.txt"
 
 # Filter out warnings due to weird Workbook naming.
 filterwarnings("ignore", message="Workbook contains no default style", category=UserWarning)
+
+def read_file_from_github(raw_url):
+    """
+    Reads a file from GitHub using its raw URL.
+
+    Args:
+        raw_url (str): The raw URL of the file on GitHub.
+
+    Returns:
+        str: The content of the file, or None if an error occurred.
+    """
+    try:
+        response = requests.get(raw_url)
+        response.raise_for_status()  # Raise HTTPError for bad responses (4xx or 5xx)
+        return response.text
+    except requests.exceptions.RequestException as e:
+        print(f"Error reading file from GitHub: {e}")
+        return None
 
 def isolate_mdr(mdr_df, rcc_df):
     # Function to only get relevant forms for specific RCC study from MDR since MDR has ALL forms.
@@ -132,7 +154,7 @@ async def choose_mdr_file():
                 n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
                 is_filtered = await run.cpu_bound(check_file_for_filter, 'Data', file[0])
                 if not is_filtered:
-                    is_pmdr = await run.cpu_bound(check_file_for_col, 'mde_is_visible', file[0])
+                    is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
                     if is_pmdr:
                         n2.message = "MDR file selected."
                         n2.type = "positive"
@@ -140,7 +162,7 @@ async def choose_mdr_file():
                         n2.spinner = False
                         mdr_filepath.set_text(file[0])
                     else:
-                        n2.message = "Please check that you are using the RCC MDR."
+                        n2.message = "'Latest' column not found in selected file. Please use RCC MDR."
                         n2.type = "negative"
                         n2.timeout = 3
                         n2.spinner = False
@@ -279,5 +301,10 @@ with ui.row():
     clearBtn.disable()
     exportBtn = ui.button("Export Table to CSV", on_click = export)
     exportBtn.disable()
+
+file_content = read_file_from_github(file_url)
+if file_content != version_num:
+    executeBtn.disable()
+    ui.notification("This app is out of date. Please use newest version.", timeout=False, type = "negative")
 
 ui.run(reload=False,native=True, port=native.find_open_port(), title="MDR Comparison Tool")
