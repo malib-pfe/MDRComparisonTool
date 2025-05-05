@@ -6,13 +6,13 @@ import os
 from warnings import filterwarnings
 from nicegui import app, ui, run, html, native
 import requests
+import asyncio
 
 version_num = "1.0"
 file_url = "https://raw.githubusercontent.com/malib-pfe/MDRComparisonTool/refs/heads/main/version.txt"
 
 # Filter out warnings due to weird Workbook naming.
 filterwarnings("ignore", message="Workbook contains no default style", category=UserWarning)
-
 def read_file_from_github(raw_url):
     """
     Reads a file from GitHub using its raw URL.
@@ -189,7 +189,11 @@ def check_file_for_filter(sheetname, filename):
 
 def check_file_for_col(colname, filename):
     df = pd.read_excel(filename, sheet_name="Data",engine="openpyxl")
-    return colname in df.columns
+    try:
+        df_col = df[colname]
+    except:
+        return False
+    return True
 
 async def handle_execute():
     n = ui.notification("Executing... Please Wait.", type='ongoing', timeout=None, spinner=True)
@@ -307,4 +311,9 @@ if file_content != version_num:
     executeBtn.disable()
     ui.notification("This app is out of date. Please use newest version.", timeout=False, type = "negative")
 
-ui.run(reload=False,native=True, port=native.find_open_port(), title="MDR Comparison Tool")
+try:
+    ui.run(native=True, reload=False, title="MDR Comparison Tool")
+except asyncio.CancelledError as e:
+    pass
+except KeyboardInterrupt:
+    pass
