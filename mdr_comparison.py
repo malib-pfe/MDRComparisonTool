@@ -147,22 +147,24 @@ async def choose_rcc_file():
         ui.notify('No file selected.')
 
 async def choose_mdr_file():
-    file = await app.native.main_window.create_file_dialog(allow_multiple=False, file_types= ('Excel Files (*.xlsx)',))
+    date_format = datetime.now().strftime("_%b_%d_%Y")
+    filename = "MDR_RCC_metadata"
+    file = await app.native.main_window.create_file_dialog(allow_multiple=False, save_filename=filename, file_types= ('Excel Files (*.xlsx)',))
     if file is not None:
-        if datetime.now().strftime("_%b_%d_%Y") in file[0]:
+        n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
+        if date_format in file[0]:
             if check_file_for_sheet('Data', file[0]):
-                n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
                 is_filtered = await run.cpu_bound(check_file_for_filter, 'Data', file[0])
                 if not is_filtered:
-                    is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
-                    if is_pmdr:
+                    #is_pmdr = await run.cpu_bound(check_file_for_col, 'latest', file[0])
+                    if "RCC" in file[0]:
                         n2.message = "MDR file selected."
                         n2.type = "positive"
                         n2.timeout = 3
                         n2.spinner = False
                         mdr_filepath.set_text(file[0])
                     else:
-                        n2.message = "'Latest' column not found in selected file. Please use RCC MDR."
+                        n2.message = "RCC not found in file name. Please use RCC MDR."
                         n2.type = "negative"
                         n2.timeout = 3
                         n2.spinner = False
@@ -172,9 +174,15 @@ async def choose_mdr_file():
                     n2.timeout = 3
                     n2.spinner = False
             else:
-                ui.notify("'Data' sheet not found. Please check file.", type='negative')
+                n2.message = "'Data' sheet not found. Please check file."
+                n2.type = "negative"
+                n2.timeout = 3
+                n2.spinner = False
         else:
-            ui.notify("Today's date not found in MDR filename.", type = 'negative')
+            n2.message = "Today's date not found in MDR filename."
+            n2.type = "negative"
+            n2.timeout = 3
+            n2.spinner = False
     else:
         ui.notify('No file selected.')
 
@@ -278,24 +286,25 @@ ui.add_css(
 )
 
 state = {}
-with ui.row():
-    ui.label("Link to MDR Folder:").style('font-weight:bold')
-    ui.link("Link", "https://pfizer.sharepoint.com/:f:/r/sites/TASL/PMO/CDISC/Weekly%20Forum%20Meeting%20Minutes/2.%20MDR%20Library%20(and%20CDISC)%20Content/RCC%20Standard%20Metadata%20Files?csf=1&web=1&e=W9AlxW", new_tab= True)
 
 with ui.header():
     ui.label('MDR Comparison Tool').style('font-size: 200%; font-weight: bold').classes('absolute-center')
     
 with ui.row():
-    ui.label('RCC Study Metadata Export File Path:').style('font-weight:bold')
+    ui.label('Study Metadata:').style('font-weight:bold')
     rcc_filepath = ui.label()
 
-ui.button('Select RCC Metadata Export',on_click=choose_rcc_file)
+ui.button('Select RCC Study Metadata Export',on_click=choose_rcc_file)
 
 with ui.row():
-    ui.label('MDR File Path:').style('font-weight:bold')
+    ui.label("Link to RCC MDR Folder:").style('font-weight:bold')
+    ui.link("Link", "https://pfizer.sharepoint.com/:f:/r/sites/TASL/PMO/CDISC/Weekly%20Forum%20Meeting%20Minutes/2.%20MDR%20Library%20(and%20CDISC)%20Content/RCC%20Standard%20Metadata%20Files?csf=1&web=1&e=W9AlxW", new_tab= True)
+
+with ui.row():
+    ui.label('MDR Metadata:').style('font-weight:bold')
     mdr_filepath = ui.label()
 
-ui.button("Select Today's MDR",on_click=choose_mdr_file)
+ui.button("Select Today's RCC MDR Metadata",on_click=choose_mdr_file)
 
 ui.space()
 
