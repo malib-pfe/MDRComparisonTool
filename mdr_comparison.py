@@ -7,6 +7,7 @@ from warnings import filterwarnings
 from nicegui import app, ui, run, html, native
 import requests
 import asyncio
+import re
 
 version_num = "1.0"
 file_url = "https://raw.githubusercontent.com/malib-pfe/MDRComparisonTool/refs/heads/main/version.txt"
@@ -129,22 +130,15 @@ async def choose_rcc_file():
     if file is not None:
         n3 = ui.notification("Checking RCC Metadata Export...", type='ongoing', timeout=None, spinner=True)
         if check_file_for_sheet('Item', file[0]):
-            is_filtered = await run.cpu_bound(check_file_for_filter, 'Item', file[0])
-            if not is_filtered:
-                is_md = await run.cpu_bound(check_file_for_col, ["RefName Path","Variable Name"],file[0], 'Item')
-                if is_md is True:
-                    n3.message = "Metadata export selected."
-                    n3.type = "positive"
-                    n3.timeout = 3
-                    n3.spinner = False
-                    rcc_filepath.set_text(file[0])
-                else:
-                    n3.message = f" '{is_md}' column not found in file name. Please use RCC Metadata Export."
-                    n3.type = "negative"
-                    n3.timeout = 3
-                    n3.spinner = False
+            is_md = await run.cpu_bound(check_file_for_col, ["RefName Path","Variable Name"] ,file[0], 'Item')
+            if is_md is True:
+                n3.message = "Metadata export selected."
+                n3.type = "positive"
+                n3.timeout = 3
+                n3.spinner = False
+                rcc_filepath.set_text(file[0])
             else:
-                n3.message = "Filter exists in Item sheet. Please check RCC Metadata Export."
+                n3.message = f" '{is_md}' column not found in file name. Please use RCC Metadata Export."
                 n3.type = "negative"
                 n3.timeout = 3
                 n3.spinner = False
@@ -163,29 +157,22 @@ async def choose_mdr_file():
     if file is not None:
         n2 = ui.notification("Checking MDR file...", type='ongoing', timeout=None, spinner=True)
         if check_file_for_sheet('Data', file[0]):
-            is_filtered = await run.cpu_bound(check_file_for_filter, 'Data', file[0])
-            if not is_filtered:
-                is_pmdr = await run.cpu_bound(check_file_for_col, ["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"], file[0], 'Data')
-                if is_pmdr is True:
-                    if date_format in file[0]:
-                        n2.message = "Today's MDR file selected."
-                        n2.type = "positive"
-                        n2.timeout = 2
-                        n2.spinner = False
-                        mdr_filepath.set_text(file[0])
-                    else:
-                        n2.message = "MDR file selected, but it is not today's. Proceeding..."
-                        n2.type = "positive"
-                        n2.timeout = 2
-                        n2.spinner = False
-                        mdr_filepath.set_text(file[0])
-                else:
-                    n2.message = f" '{is_pmdr}' column not found in file name. Please use RCC MDR."
-                    n2.type = "negative"
-                    n2.timeout = 3
+            is_pmdr = await run.cpu_bound(check_file_for_col, ["f_ver","mdes_form_name", "mde_name", "item_refname", "crf_collection_guidance", "mandatory_to_be_collected", "mde_is_cond_reqd"], file[0], 'Data')
+            if is_pmdr is True:
+                if date_format in file[0]:
+                    n2.message = "Today's MDR file selected."
+                    n2.type = "positive"
+                    n2.timeout = 2
                     n2.spinner = False
+                    mdr_filepath.set_text(file[0])
+                else:
+                    n2.message = "MDR file selected, but it is not today's. Proceeding..."
+                    n2.type = "positive"
+                    n2.timeout = 2
+                    n2.spinner = False
+                    mdr_filepath.set_text(file[0])
             else:
-                n2.message = "Filter exists in Data sheet. Please check RCC MDR."
+                n2.message = f" '{is_pmdr}' column not found in file name. Please use RCC MDR."
                 n2.type = "negative"
                 n2.timeout = 3
                 n2.spinner = False
@@ -205,6 +192,13 @@ def check_file_for_filter(sheetname, filename):
     workbook = op.load_workbook(filename)
     sheet = workbook[sheetname]
     return sheet.auto_filter
+
+def remove_filter(sheetname, filename):
+    wb = op.load_workbook(filename)
+    ws = wb[sheetname]
+    ws.auto_filter.ref = None
+    wb.save(filename)
+    return True
 
 def check_file_for_col(colnames, filename, sheetname):
     df = pd.read_excel(filename, sheet_name=sheetname,engine="openpyxl")
@@ -251,13 +245,25 @@ async def export():
     folder_path = os.path.dirname(rcc_filepath.text)
     filename = '/MDRComparisonOutput_'
     now = datetime.now()
-    timestamp_string = folder_path + filename + now.strftime("%Y_%m_%d_%H_%M_%S") + '.csv'
-    
+    now_string = now.strftime("_%b_%d_%Y_%H_%M_%S")
+    timestamp_string = folder_path + filename + now_string + '.xlsx'
+
+    # Build info dataframe
+    mdr_date = re.findall(r'(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec)_\d{2}_\d{4}', mdr_filepath.text)
+    info_dict = {
+        "Tool Run Date": now.strftime('%b %d %Y'),
+        "MDR File Date": mdr_date[0].replace('_', ' ')
+    }
+    info_df = pd.DataFrame([info_dict]).T
+
     # Added builder comment column.
     df = result
     df["Builder Comments"] = ""
-    df.to_csv(timestamp_string, index= False)
-    ui.notify("Table exported to CSV located in " + folder_path)
+    with pd.ExcelWriter(timestamp_string, engine= "openpyxl") as writer:  
+        df.to_excel(writer, index= False, sheet_name = 'O   utput', freeze_panes=(1, 1))
+        info_df.to_excel(writer, header= False, sheet_name = 'Info')
+
+    ui.notify("Table export located in " + folder_path)
 
 # Define the UI.
 ui.add_css(
@@ -324,7 +330,7 @@ with ui.row():
     executeBtn = ui.button("Execute Comparison", on_click= lambda: handle_execute() if rcc_filepath.text != '' and mdr_filepath.text != '' else ui.notify('Please select both files to proceed.'))
     clearBtn = ui.button("Clear Table", on_click= reset_page)
     clearBtn.disable()
-    exportBtn = ui.button("Export Table to CSV", on_click = export)
+    exportBtn = ui.button("Export Table", on_click = export)
     exportBtn.disable()
 
 file_content = read_file_from_github(file_url)
